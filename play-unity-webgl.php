@@ -8,26 +8,6 @@
  * Author URI: https://www.andrewallbright.com
  */
 
-include "admin/view.php";
-
-function unity_webgl_games_admin_page_submit()
-{
-  // TODO: Handle admin page form submit
-}
-
-function unity_webgl_games_admin_page()
-{
-  $hookname = add_menu_page(
-    'Unity WebGL Games',
-    'Unity WebGL Games',
-    'manage_options',
-    'unity-webgl-games',
-    'play_unity_webgl_page_html'
-  );
-
-  add_action('load-' . $hookname, 'unity_webgl_games_admin_page_submit');
-}
-
 function unity_webgl_games_setup_post_types()
 {
   register_post_type('unity_webgl_game', [
@@ -49,7 +29,7 @@ function unity_webgl_games_activate()
 
 function unity_webgl_games_deactivate()
 {
-  unregister_post_type('game');
+  unregister_post_type('unity_webgl_game');
 
   flush_rewrite_rules();
 }
@@ -61,8 +41,6 @@ function main()
   register_deactivation_hook(__FILE__, 'unity_webgl_games_deactivate');
 
   add_action('init', 'unity_webgl_games_setup_post_types');
-  // Top-Level Menus (https://developer.wordpress.org/plugins/administration-menus/top-level-menus/)
-  add_action('admin_menu', 'unity_webgl_games_admin_page');
 }
 
 main();
