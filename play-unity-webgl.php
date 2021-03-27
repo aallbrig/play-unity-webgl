@@ -8,15 +8,7 @@
  * Author URI: https://www.andrewallbright.com
  */
 
-// TODO: Move this to different file
-function play_unity_webgl_page_html()
-{
-  ?>
-    <div class="wrap">
-        <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-    </div>
-  <?php
-}
+include "admin/view.php";
 
 // Top-Level Menus (https://developer.wordpress.org/plugins/administration-menus/top-level-menus/)
 add_action('admin_menu', 'unity_webgl_games_page');
