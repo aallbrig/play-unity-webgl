@@ -28,7 +28,7 @@ function unity_webgl_games_setup_post_types()
     'public' => true,
     'has_archive' => true,
     'rewrite' => [
-      'slug' => 'webglgames',
+      'slug' => 'webgl-games',
     ],
     'supports' => [
       'title',
@@ -58,10 +58,17 @@ function webgl_game_zip_file_input_html($post)
 {
   wp_nonce_field(plugin_basename(__FILE__), 'zip_file_input_nonce');
 
-  ?>
-    <label for="zip_file_input">WebGL Game Zip</label>
-    <input type="file" id="zip_file_input" name="zip_file_input" value="" size="25"/>
-  <?php
+  $value = get_post_meta($post->ID, 'zip_file_input', true);
+  $html = '';
+
+  if (isset($value)) {
+    $html .= '<h4>Upload: ' . basename($value['file']) . '</h4>';
+  }
+
+  $html .= '<label for="zip_file_input">WebGL Game Zip</label>';
+  $html .= '<input type="file" id="zip_file_input" name="zip_file_input" value="" size="25"/>';
+
+  echo $html;
 }
 
 function webgl_game_zip_file_input_save($id)
@@ -85,6 +92,8 @@ function webgl_game_zip_file_input_save($id)
     $upload_file_type = wp_check_filetype(basename($_FILES['zip_file_input']['name']))['type'];
 
     if (in_array($upload_file_type, $supported_types)) {
+      // Replace with unzip & verify a unity webGL build
+
       $upload = wp_upload_bits($_FILES['zip_file_input']['name'], null, file_get_contents($_FILES['zip_file_input']['tmp_name']));
 
       if (isset($upload['error']) && $upload['error'] != 0) {
@@ -112,7 +121,7 @@ function unity_webgl_games_webgl_input_meta_box()
 
 function webgl_game_zip_file_update_edit_form()
 {
-   echo ' enctype="multipart/form-data"';
+  echo ' enctype="multipart/form-data"';
 }
 
 function main()
