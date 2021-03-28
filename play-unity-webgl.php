@@ -65,10 +65,36 @@ function webgl_game_zip_file_input_html($post)
     $html .= '<h4>Upload: ' . basename($value['file']) . '</h4>';
   }
 
-  $html .= '<label for="zip_file_input">WebGL Game Zip</label>';
+  $html .= '<label for="zip_file_input">Upload new Unity WebGL Build Zip</label><br/>';
   $html .= '<input type="file" id="zip_file_input" name="zip_file_input" value="" size="25"/>';
 
   echo $html;
+}
+
+function validate_unity_webgl_file($file)
+{
+  $supported_file_types = [
+    ['ext' => 'js', 'type' => 'application/javascript'],
+    ['ext' => 'unityweb', 'type' => 'application/vnd.unity'],
+    ['ext' => 'json', 'type' => 'application/json'],
+  ];
+
+  $file_type = wp_check_filetype($file);
+
+  $matched_supported_file_type = array_filter($supported_file_types, function ($var) use ($file_type) {
+    return $file_type['ext'] == $var['ext'] && $file_type['type'] == $var['type'];
+  });
+
+  if (count($matched_supported_file_type) == 0) {
+    return false;
+  }
+
+  // Only UnityLoader.js is the ONLY supported JS file
+  if ($file_type['ext'] == 'js' && basename($file) != 'UnityLoader.js') {
+    return false;
+  }
+
+  return true;
 }
 
 function webgl_game_zip_file_input_save($id)
@@ -94,13 +120,45 @@ function webgl_game_zip_file_input_save($id)
     if (in_array($upload_file_type, $supported_types)) {
       // Replace with unzip & verify a unity webGL build
 
-      $upload = wp_upload_bits($_FILES['zip_file_input']['name'], null, file_get_contents($_FILES['zip_file_input']['tmp_name']));
+      $tmp_filepath = $_FILES['zip_file_input']['tmp_name'];
+      WP_Filesystem();
+      $tmp_dir = path_join(get_temp_dir(), uniqid());
 
-      if (isset($upload['error']) && $upload['error'] != 0) {
-        wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
-      } else {
-        add_post_meta($id, 'zip_file_input', $upload);
-        update_post_meta($id, 'zip_file_input', $upload);
+      $create = wp_mkdir_p($tmp_dir);
+      if (!$create) {
+        wp_die('Zip verification unsuccessful. Cannot create new temp directory.');
+      }
+
+      $files = list_files($tmp_dir);
+      if (count($files) != 0) {
+        wp_die('Zip verification unsuccessful. Newly created temp dir is mysteriously not empty.');
+      }
+
+      $unzipSuccess = unzip_file($tmp_filepath, $tmp_dir);
+      if (is_wp_error($unzipSuccess)) {
+        wp_die('Zip verification unsuccessful. Cannot unzip uploaded file to temp directory.');
+      }
+
+      $buildFiles = list_files(path_join($tmp_dir, 'Build'));
+      if (count($buildFiles) == 0) {
+        wp_die('Zip verification unsuccessful. Cannot find Build directory in uploaded ZIP.');
+      }
+
+      foreach ($buildFiles as $buildFile) {
+        if (!validate_unity_webgl_file($buildFile)) {
+          wp_die('Detected invalid webGL build file in build directory.');
+        }
+      }
+
+      foreach ($buildFiles as $buildFile) {
+        $upload = wp_upload_bits(basename($buildFile), null, file_get_contents($buildFile));
+
+        if (isset($upload['error']) && $upload['error'] != 0) {
+          wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
+        } else {
+          add_post_meta($id, 'zip_file_input', $upload);
+          update_post_meta($id, 'zip_file_input', $upload);
+        }
       }
     } else {
       wp_die('The file type you have uploaded is not supported');
@@ -124,6 +182,14 @@ function webgl_game_zip_file_update_edit_form()
   echo ' enctype="multipart/form-data"';
 }
 
+function unity_webgl_games_custom_upload_mimes($existing_mimes)
+{
+  $existing_mimes['unityweb'] = 'application/vnd.unity';
+  $existing_mimes['json'] = 'application/json';
+
+  return $existing_mimes;
+}
+
 function main()
 {
   register_activation_hook(__FILE__, 'unity_webgl_games_activate');
@@ -135,6 +201,8 @@ function main()
   add_action('add_meta_boxes', 'unity_webgl_games_webgl_input_meta_box');
   add_action('save_post', 'webgl_game_zip_file_input_save');
   add_action('post_edit_form_tag', 'webgl_game_zip_file_update_edit_form');
+
+  add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
 }
 
 main();
