@@ -58,11 +58,27 @@ function webgl_game_zip_file_input_html($post)
 {
   wp_nonce_field(plugin_basename(__FILE__), 'zip_file_input_nonce');
 
-  $value = get_post_meta($post->ID, 'zip_file_input', true);
+  $unityLoader = get_post_meta($post->ID, 'unity_loader', true);
+  $dataUnityweb = get_post_meta($post->ID, 'data_unityweb', true);
+  $gameJson = get_post_meta($post->ID, 'game_json', true);
+  $wasmCodeUnityweb = get_post_meta($post->ID, 'wasm_code_unityweb', true);
+  $wasmFrameworkUnityweb = get_post_meta($post->ID, 'wasm_framework_unityweb', true);
   $html = '';
 
-  if (isset($value)) {
-    $html .= '<h4>Upload: ' . basename($value['file']) . '</h4>';
+  if (isset($unityLoader) && !empty($unityLoader)) {
+    $html .= '<h4> Unity Loader JS: ' . basename($unityLoader['file']) . '</h4>';
+  }
+  if (isset($dataUnityweb) && !empty($dataUnityweb)) {
+    $html .= '<h4> Data Unity Web: ' . basename($dataUnityweb['file']) . '</h4>';
+  }
+  if (isset($gameJson) && !empty($gameJson)) {
+    $html .= '<h4> Game JSON: ' . basename($gameJson['file']) . '</h4>';
+  }
+  if (isset($wasmCodeUnityweb) && !empty($wasmCodeUnityweb)) {
+    $html .= '<h4> WASM Code Unity Web: ' . basename($wasmCodeUnityweb['file']) . '</h4>';
+  }
+  if (isset($wasmFrameworkUnityweb) && !empty($wasmFrameworkUnityweb)) {
+    $html .= '<h4> WASM Framework Unity Web: ' . basename($wasmFrameworkUnityweb['file']) . '</h4>';
   }
 
   $html .= '<label for="zip_file_input">Upload new Unity WebGL Build Zip</label><br/>';
@@ -162,23 +178,51 @@ function webgl_game_zip_file_input_save($id)
         $game_dir = path_join($folder, $interpretedGameName);
 
         $arr['path'] = $game_dir;
-        $arr['url'] = $game_dir;
+        $arr['url'] = path_join(path_join($arr['baseurl'], 'play-unity-webgl'), $interpretedGameName);
 
         return $arr;
       };
 
       if (!empty($upload_dir['basedir'])) {
+
+        $folder = path_join($upload_dir['basedir'], 'play-unity-webgl');
+        $game_dir = path_join($folder, $interpretedGameName);
+
         foreach ($buildFiles as $buildFile) {
           // If someone reads this and knows a non hacky way of adding media to a dynamic sub folder, please let me know!
           add_filter('upload_dir', $anonFn);
-          $upload = wp_upload_bits(path_join($interpretedGameName, basename($buildFile)), null, file_get_contents($buildFile));
+          $buildFileBaseName = basename($buildFile);
+          $targetBuildFileUploadPath = path_join($game_dir, $buildFileBaseName);
+
+          // Override previous file
+          if (file_exists($targetBuildFileUploadPath)) {
+            wp_delete_file($targetBuildFileUploadPath);
+          }
+
+          $upload = wp_upload_bits($buildFileBaseName, null, file_get_contents($buildFile));
           remove_filter('upload_dir', $anonFn);
 
           if (isset($upload['error']) && $upload['error'] != 0) {
             wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
           } else {
-            add_post_meta($id, 'zip_file_input', $upload);
-            update_post_meta($id, 'zip_file_input', $upload);
+
+            if ('UnityLoader.js' == $buildFileBaseName) {
+              add_post_meta($id, 'unity_loader', $upload);
+              update_post_meta($id, 'unity_loader', $upload);
+            } else if (strpos($buildFileBaseName, 'data.unityweb') !== false) {
+              add_post_meta($id, 'data_unityweb', $upload);
+              update_post_meta($id, 'data_unityweb', $upload);
+            } else if (strpos($buildFileBaseName, 'json') !== false) {
+              add_post_meta($id, 'game_json', $upload);
+              update_post_meta($id, 'game_json', $upload);
+            } else if (strpos($buildFileBaseName, 'wasm.code.unityweb') !== false) {
+              add_post_meta($id, 'wasm_code_unityweb', $upload);
+              update_post_meta($id, 'wasm_code_unityweb', $upload);
+            } else if (strpos($buildFileBaseName, 'wasm.framework.unityweb') !== false) {
+              add_post_meta($id, 'wasm_framework_unityweb', $upload);
+              update_post_meta($id, 'wasm_framework_unityweb', $upload);
+            }
+
           }
         }
       } else {
