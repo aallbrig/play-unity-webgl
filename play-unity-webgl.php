@@ -99,6 +99,8 @@ function validate_unity_webgl_file($file)
 
 function webgl_game_zip_file_input_save($id)
 {
+  global $wp_filesystem;
+
   if (!wp_verify_nonce($_POST['zip_file_input_nonce'], plugin_basename(__FILE__))) {
     return $id;
   }
@@ -152,16 +154,34 @@ function webgl_game_zip_file_input_save($id)
         }
       }
 
-      foreach ($buildFiles as $buildFile) {
-        $upload_file_name = path_join(path_join($interpretedGameName, 'Build'), basename($buildFile));
-        $upload = wp_upload_bits($upload_file_name, null, file_get_contents($buildFile));
+      // Valid files
+      $upload_dir = wp_upload_dir();
 
-        if (isset($upload['error']) && $upload['error'] != 0) {
-          wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
-        } else {
-          add_post_meta($id, 'zip_file_input', $upload);
-          update_post_meta($id, 'zip_file_input', $upload);
+      if (!empty($upload_dir['basedir'])) {
+        foreach ($buildFiles as $buildFile) {
+          $anonFn = function ($arr) use ($interpretedGameName) {
+            $folder = path_join($arr['basedir'], 'play-unity-webgl');
+            $game_dir = path_join($folder, $interpretedGameName);
+
+            $arr['path'] = $game_dir;
+            $arr['url'] = $game_dir;
+
+            return $arr;
+          };
+
+          add_filter('upload_dir', $anonFn);
+          $upload = wp_upload_bits(path_join($interpretedGameName, basename($buildFile)), null, file_get_contents($buildFile));
+          remove_filter('upload_dir', $anonFn);
+
+          if (isset($upload['error']) && $upload['error'] != 0) {
+            wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
+          } else {
+            add_post_meta($id, 'zip_file_input', $upload);
+            update_post_meta($id, 'zip_file_input', $upload);
+          }
         }
+      } else {
+        wp_die('Wordpress upload directory not detected');
       }
     } else {
       wp_die('The file type you have uploaded is not supported');
@@ -189,21 +209,26 @@ function unity_webgl_games_custom_upload_mimes($existing_mimes)
 {
   $existing_mimes['unityweb'] = 'application/vnd.unity';
   $existing_mimes['json'] = 'application/json';
+  $existing_mimes['wasm'] = 'application/octet-stream';
+  $existing_mimes['asm'] = 'application/octet-stream';
+  $existing_mimes['code'] = 'application/octet-stream';
+  $existing_mimes['data'] = 'application/octet-stream';
 
   return $existing_mimes;
 }
 
-function unity_webgl_games_upload_dir( $arr ) {
-  $folder = '/unity-webgl-games';
+function unity_webgl_games_upload_dir($arr)
+{
+  $folder = path_join($arr['basedir'], plugin_basename(__FILE__));
 
-  $arr['path'] .= $folder;
-  $arr['url'] .= $folder;
-  $arr['subdir'] .= $folder;
+  $arr['path'] = $folder;
+  $arr['url'] = $folder;
 
   return $arr;
 }
 
-function unity_webgl_games_page_template( $page_template ) {
+function unity_webgl_games_page_template($page_template)
+{
   if (get_post_type() == webgl_game_post_type) {
     $page_template = plugin_dir_path(__FILE__) . 'templates/single-unity_webgl_game.php';
   }
