@@ -115,7 +115,9 @@ function webgl_game_zip_file_input_save($id)
 
   if (!empty($_FILES['zip_file_input']['name'])) {
     $supported_types = ['application/zip'];
-    $upload_file_type = wp_check_filetype(basename($_FILES['zip_file_input']['name']))['type'];
+    $zipBasename = basename($_FILES['zip_file_input']['name']);
+    $interpretedGameName = pathinfo($_FILES['zip_file_input']['name'], PATHINFO_FILENAME);
+    $upload_file_type = wp_check_filetype($zipBasename)['type'];
 
     if (in_array($upload_file_type, $supported_types)) {
       // Replace with unzip & verify a unity webGL build
@@ -151,7 +153,8 @@ function webgl_game_zip_file_input_save($id)
       }
 
       foreach ($buildFiles as $buildFile) {
-        $upload = wp_upload_bits(basename($buildFile), null, file_get_contents($buildFile));
+        $upload_file_name = path_join(path_join($interpretedGameName, 'Build'), basename($buildFile));
+        $upload = wp_upload_bits($upload_file_name, null, file_get_contents($buildFile));
 
         if (isset($upload['error']) && $upload['error'] != 0) {
           wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
@@ -190,6 +193,24 @@ function unity_webgl_games_custom_upload_mimes($existing_mimes)
   return $existing_mimes;
 }
 
+function unity_webgl_games_upload_dir( $arr ) {
+  $folder = '/unity-webgl-games';
+
+  $arr['path'] .= $folder;
+  $arr['url'] .= $folder;
+  $arr['subdir'] .= $folder;
+
+  return $arr;
+}
+
+function unity_webgl_games_page_template( $page_template ) {
+  if (get_post_type() == webgl_game_post_type) {
+    $page_template = plugin_dir_path(__FILE__) . 'templates/single-unity_webgl_game.php';
+  }
+
+  return $page_template;
+}
+
 function main()
 {
   register_activation_hook(__FILE__, 'unity_webgl_games_activate');
@@ -203,6 +224,8 @@ function main()
   add_action('post_edit_form_tag', 'webgl_game_zip_file_update_edit_form');
 
   add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
+  add_filter('upload_dir', 'unity_webgl_games_upload_dir');
+  add_filter('single_template', 'unity_webgl_games_page_template');
 }
 
 main();
