@@ -157,18 +157,19 @@ function webgl_game_zip_file_input_save($id)
       // Valid files
       $upload_dir = wp_upload_dir();
 
+      $anonFn = function ($arr) use ($interpretedGameName) {
+        $folder = path_join($arr['basedir'], 'play-unity-webgl');
+        $game_dir = path_join($folder, $interpretedGameName);
+
+        $arr['path'] = $game_dir;
+        $arr['url'] = $game_dir;
+
+        return $arr;
+      };
+
       if (!empty($upload_dir['basedir'])) {
         foreach ($buildFiles as $buildFile) {
-          $anonFn = function ($arr) use ($interpretedGameName) {
-            $folder = path_join($arr['basedir'], 'play-unity-webgl');
-            $game_dir = path_join($folder, $interpretedGameName);
-
-            $arr['path'] = $game_dir;
-            $arr['url'] = $game_dir;
-
-            return $arr;
-          };
-
+          // If someone reads this and knows a non hacky way of adding media to a dynamic sub folder, please let me know!
           add_filter('upload_dir', $anonFn);
           $upload = wp_upload_bits(path_join($interpretedGameName, basename($buildFile)), null, file_get_contents($buildFile));
           remove_filter('upload_dir', $anonFn);
