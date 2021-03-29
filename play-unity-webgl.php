@@ -3,7 +3,7 @@
  * Plugin Name: Play Unity WebGL
  * Plugin URI: https://github.com/aallbrig/play-unity-webgl
  * Description: Upload your Unity WebGL builds and play through them on your wordpress site!
- * Version: v0.0.1
+ * Version: v0.0.2
  * Author: Andrew Allbright
  * Author URI: https://www.andrewallbright.com
  */
@@ -272,15 +272,6 @@ function unity_webgl_games_upload_dir($arr)
   return $arr;
 }
 
-function unity_webgl_games_page_template($page_template)
-{
-  if (get_post_type() == webgl_game_post_type) {
-    $page_template = plugin_dir_path(__FILE__) . 'templates/single-unity_webgl_game.php';
-  }
-
-  return $page_template;
-}
-
 function unity_webgl_games_render_webgl_player($content)
 {
   global $post;
@@ -289,11 +280,13 @@ function unity_webgl_games_render_webgl_player($content)
     $unityLoader = get_post_meta($post->ID, 'unity_loader', true);
     $gameJson = get_post_meta($post->ID, 'game_json', true);
 
-    $content = '<script src="' . $unityLoader['url'] . '"></script>';
+    $currentContent = $content;
+    $content .= '<script src="' . $unityLoader['url'] . '"></script>';
+    $content .= '<div id="unityContainer"><div id="unityPlayer"></div></div>';
     $content .= '<script>';
-    $content .= 'UnityLoader.instantiate("unityContainer", "' . $gameJson['url'] . '");';
+    $content .= 'UnityLoader.instantiate("unityPlayer", "' . $gameJson['url'] . '");';
     $content .= '</script>';
-    $content .= '<div id="unityContainer" style="width: 80%; height:auto; margin: auto;"></div>';
+    $content .= $currentContent;
   }
 
   return $content;
@@ -313,9 +306,11 @@ function main()
 
   add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
   add_filter('upload_dir', 'unity_webgl_games_upload_dir');
-  // add_filter('single_template', 'unity_webgl_games_page_template');
 
   add_filter('the_content', 'unity_webgl_games_render_webgl_player');
+
+  wp_enqueue_style('unity-webgl-player-style', path_join(plugin_dir_url(__FILE__), 'public/css/unity-web-player.css'));
+  wp_enqueue_script('unity-webgl-player-resize-for-mobile', path_join(plugin_dir_url(__FILE__), 'public/js/unity-web-player.js'));
 }
 
 main();
