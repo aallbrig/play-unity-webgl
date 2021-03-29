@@ -28,6 +28,9 @@ $gameJson = get_post_meta($post->ID, 'game_json', true);
     </script>
 </head>
 <body>
-<div id="unityContainer"></div>
+    <div id="unityContainer"></div>
 </body>
 </html>
+
+<?php
+get_footer();
