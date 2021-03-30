@@ -310,6 +310,7 @@ function main()
   add_filter('the_content', 'unity_webgl_games_render_webgl_player');
 
   wp_enqueue_style('unity-webgl-player-style', path_join(plugin_dir_url(__FILE__), 'public/css/unity-web-player.css'));
+  wp_enqueue_script('unity-webgl-player-script', path_join(plugin_dir_url(__FILE__), 'public/js/unity-web-player.js'));
 }
 
 main();
