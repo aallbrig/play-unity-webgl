@@ -272,7 +272,7 @@ function unity_webgl_games_upload_dir($arr)
   return $arr;
 }
 
-function unity_webgl_games_render_webgl_player($content)
+function unity_webgl_games_render_webgl_player($content): string
 {
   global $post;
 
@@ -292,25 +292,37 @@ function unity_webgl_games_render_webgl_player($content)
   return $content;
 }
 
-function main()
-{
-  register_activation_hook(__FILE__, 'unity_webgl_games_activate');
-  register_deactivation_hook(__FILE__, 'unity_webgl_games_deactivate');
+if (!class_exists('PlayUnityWebGL_Plugin')) {
+  class PlayUnityWebGL_Plugin
+  {
+    static $instance = false;
+    public static function getInstance(){
+      if (!self::$instance) self::$instance = new self;
 
-  add_action('init', 'unity_webgl_games_setup_post_types');
+      return self::$instance;
+    }
 
-  // Custom input
-  add_action('add_meta_boxes', 'unity_webgl_games_webgl_input_meta_box');
-  add_action('save_post', 'webgl_game_zip_file_input_save');
-  add_action('post_edit_form_tag', 'webgl_game_zip_file_update_edit_form');
+    private function __construct()
+    {
+      register_activation_hook(__FILE__, 'unity_webgl_games_activate');
+      register_deactivation_hook(__FILE__, 'unity_webgl_games_deactivate');
 
-  add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
-  add_filter('upload_dir', 'unity_webgl_games_upload_dir');
+      add_action('init', 'unity_webgl_games_setup_post_types');
 
-  add_filter('the_content', 'unity_webgl_games_render_webgl_player');
+      // Custom input
+      add_action('add_meta_boxes', 'unity_webgl_games_webgl_input_meta_box');
+      add_action('save_post', 'webgl_game_zip_file_input_save');
+      add_action('post_edit_form_tag', 'webgl_game_zip_file_update_edit_form');
 
-  wp_enqueue_style('unity-webgl-player-style', path_join(plugin_dir_url(__FILE__), 'public/css/unity-web-player.css'));
-  wp_enqueue_script('unity-webgl-player-script', path_join(plugin_dir_url(__FILE__), 'public/js/unity-web-player.js'));
+      add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
+      add_filter('upload_dir', 'unity_webgl_games_upload_dir');
+
+      add_filter('the_content', 'unity_webgl_games_render_webgl_player');
+
+      wp_enqueue_style('unity-webgl-player-style', path_join(plugin_dir_url(__FILE__), 'public/css/unity-web-player.css'));
+      wp_enqueue_script('unity-webgl-player-script', path_join(plugin_dir_url(__FILE__), 'public/js/unity-web-player.js'));
+    }
+  }
+
+  $PlayUnityWebGL_Plugin = PlayUnityWebGL_Plugin::getInstance();
 }
-
-main();
