@@ -58,6 +58,7 @@ function webgl_game_zip_file_input_html($post)
 {
   wp_nonce_field(plugin_basename(__FILE__), 'zip_file_input_nonce');
 
+  $zipFile = get_post_meta($post->ID, 'zip_file', true);
   $unityLoader = get_post_meta($post->ID, 'unity_loader', true);
   $dataUnityweb = get_post_meta($post->ID, 'data_unityweb', true);
   $gameJson = get_post_meta($post->ID, 'game_json', true);
@@ -65,21 +66,18 @@ function webgl_game_zip_file_input_html($post)
   $wasmFrameworkUnityweb = get_post_meta($post->ID, 'wasm_framework_unityweb', true);
   $html = '';
 
-  if (isset($unityLoader) && !empty($unityLoader)) {
+  if (isset($zipFile) && !empty($zipFile))
+    $html .= '<h4> Zip File: ' . basename($zipFile['file']) . '</h4>';
+  if (isset($unityLoader) && !empty($unityLoader))
     $html .= '<h4> Unity Loader JS: ' . basename($unityLoader['file']) . '</h4>';
-  }
-  if (isset($dataUnityweb) && !empty($dataUnityweb)) {
+  if (isset($dataUnityweb) && !empty($dataUnityweb))
     $html .= '<h4> Data Unity Web: ' . basename($dataUnityweb['file']) . '</h4>';
-  }
-  if (isset($gameJson) && !empty($gameJson)) {
+  if (isset($gameJson) && !empty($gameJson))
     $html .= '<h4> Game JSON: ' . basename($gameJson['file']) . '</h4>';
-  }
-  if (isset($wasmCodeUnityweb) && !empty($wasmCodeUnityweb)) {
+  if (isset($wasmCodeUnityweb) && !empty($wasmCodeUnityweb))
     $html .= '<h4> WASM Code Unity Web: ' . basename($wasmCodeUnityweb['file']) . '</h4>';
-  }
-  if (isset($wasmFrameworkUnityweb) && !empty($wasmFrameworkUnityweb)) {
+  if (isset($wasmFrameworkUnityweb) && !empty($wasmFrameworkUnityweb))
     $html .= '<h4> WASM Framework Unity Web: ' . basename($wasmFrameworkUnityweb['file']) . '</h4>';
-  }
 
   $html .= '<label for="zip_file_input">Upload new Unity WebGL Build Zip</label><br/>';
   $html .= '<input type="file" id="zip_file_input" name="zip_file_input" value="" size="25"/>';
@@ -170,6 +168,8 @@ function webgl_game_zip_file_input_save($id)
 
       // Valid files
       $upload_dir = wp_upload_dir();
+      $folder = path_join($upload_dir['basedir'], 'play-unity-webgl');
+      $game_dir = path_join($folder, $interpretedGameName);
 
       $anonFn = function ($arr) use ($interpretedGameName) {
         $folder = path_join($arr['basedir'], 'play-unity-webgl');
@@ -181,10 +181,24 @@ function webgl_game_zip_file_input_save($id)
         return $arr;
       };
 
-      if (!empty($upload_dir['basedir'])) {
+      // Upload ZIP
+      // Override previous file
+      if (file_exists(path_join($game_dir, $zipBasename))) {
+        wp_delete_file(path_join($game_dir, $zipBasename));
+      }
 
-        $folder = path_join($upload_dir['basedir'], 'play-unity-webgl');
-        $game_dir = path_join($folder, $interpretedGameName);
+      add_filter('upload_dir', $anonFn);
+      $upload = wp_upload_bits($zipBasename, null, file_get_contents($_FILES['zip_file_input']['tmp_name']));
+      remove_filter('upload_dir', $anonFn);
+
+      if (isset($upload['error']) && $upload['error'] != 0) {
+        wp_die('There was an error uploading your file. The error is: ' . $upload['error']);
+      }
+
+      add_post_meta($id, 'zip_file', $upload);
+      update_post_meta($id, 'zip_file', $upload);
+
+      if (!empty($upload_dir['basedir'])) {
 
         foreach ($buildFiles as $buildFile) {
           $buildFileBaseName = basename($buildFile);
@@ -294,7 +308,9 @@ if (!class_exists('PlayUnityWebGL_Plugin')) {
   class PlayUnityWebGL_Plugin
   {
     static $instance = false;
-    public static function getInstance(){
+
+    public static function getInstance()
+    {
       if (!self::$instance) self::$instance = new self;
 
       return self::$instance;
