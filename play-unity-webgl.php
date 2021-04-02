@@ -115,8 +115,6 @@ function validate_unity_webgl_file($file)
 
 function webgl_game_zip_file_input_save($id)
 {
-  global $wp_filesystem;
-
   if (!wp_verify_nonce($_POST['zip_file_input_nonce'], plugin_basename(__FILE__))) {
     return $id;
   }
@@ -178,7 +176,7 @@ function webgl_game_zip_file_input_save($id)
         $game_dir = path_join($folder, $interpretedGameName);
 
         $arr['path'] = $game_dir;
-        $arr['url'] = path_join(path_join($arr['baseurl'], 'play-unity-webgl'), $interpretedGameName);
+        $arr['url'] = wp_make_link_relative(path_join(path_join($arr['baseurl'], 'play-unity-webgl'), $interpretedGameName));
 
         return $arr;
       };
@@ -189,8 +187,6 @@ function webgl_game_zip_file_input_save($id)
         $game_dir = path_join($folder, $interpretedGameName);
 
         foreach ($buildFiles as $buildFile) {
-          // If someone reads this and knows a non hacky way of adding media to a dynamic sub folder, please let me know!
-          add_filter('upload_dir', $anonFn);
           $buildFileBaseName = basename($buildFile);
           $targetBuildFileUploadPath = path_join($game_dir, $buildFileBaseName);
 
@@ -199,6 +195,8 @@ function webgl_game_zip_file_input_save($id)
             wp_delete_file($targetBuildFileUploadPath);
           }
 
+          // If someone reads this and knows a non hacky way of adding media to a dynamic sub folder, please let me know!
+          add_filter('upload_dir', $anonFn);
           $upload = wp_upload_bits($buildFileBaseName, null, file_get_contents($buildFile));
           remove_filter('upload_dir', $anonFn);
 
@@ -209,16 +207,16 @@ function webgl_game_zip_file_input_save($id)
             if ('UnityLoader.js' == $buildFileBaseName) {
               add_post_meta($id, 'unity_loader', $upload);
               update_post_meta($id, 'unity_loader', $upload);
-            } else if (strpos($buildFileBaseName, 'data.unityweb') !== false) {
+            } else if (str_contains($buildFileBaseName, 'data.unityweb')) {
               add_post_meta($id, 'data_unityweb', $upload);
               update_post_meta($id, 'data_unityweb', $upload);
-            } else if (strpos($buildFileBaseName, 'json') !== false) {
+            } else if (str_contains($buildFileBaseName, 'json')) {
               add_post_meta($id, 'game_json', $upload);
               update_post_meta($id, 'game_json', $upload);
-            } else if (strpos($buildFileBaseName, 'wasm.code.unityweb') !== false) {
+            } else if (str_contains($buildFileBaseName, 'wasm.code.unityweb')) {
               add_post_meta($id, 'wasm_code_unityweb', $upload);
               update_post_meta($id, 'wasm_code_unityweb', $upload);
-            } else if (strpos($buildFileBaseName, 'wasm.framework.unityweb') !== false) {
+            } else if (str_contains($buildFileBaseName, 'wasm.framework.unityweb')) {
               add_post_meta($id, 'wasm_framework_unityweb', $upload);
               update_post_meta($id, 'wasm_framework_unityweb', $upload);
             }
