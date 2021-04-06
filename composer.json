@@ -1,0 +1,14 @@
+{
+    "name": "andrewallbright/play-unity-webgl",
+    "description": "This plugin allows users to upload and view their unity WebGL builds",
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "authors": [
+        {
+            "name": "Andrew Allbright",
+            "email": "aallbrig@gmail.com"
+        }
+    ]
+}

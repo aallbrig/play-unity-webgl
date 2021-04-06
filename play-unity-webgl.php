@@ -330,7 +330,6 @@ if (!class_exists('PlayUnityWebGL_Plugin')) {
 
       add_filter('mime_types', 'unity_webgl_games_custom_upload_mimes');
       add_filter('upload_dir', 'unity_webgl_games_upload_dir');
-
       add_filter('the_content', 'unity_webgl_games_render_webgl_player');
 
       wp_enqueue_style('unity-webgl-player-style', path_join(plugin_dir_url(__FILE__), 'public/css/unity-web-player.css'));
